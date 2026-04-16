@@ -1,0 +1,1893 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0D0D0D">
+    <title>健康打卡 - Health Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #FF6B35;
+            --primary-light: #FF8F66;
+            --primary-dark: #E55A2B;
+            --accent: #FFD93D;
+            --accent-glow: rgba(255, 217, 61, 0.3);
+            --teeth-primary: #4CAF50;
+            --teeth-secondary: #2196F3;
+            --plank-primary: #9C27B0;
+            --plank-secondary: #E91E63;
+            --bg-dark: #0D0D0D;
+            --bg-card: #1A1A1A;
+            --bg-elevated: #252525;
+            --text-primary: #FFFFFF;
+            --text-secondary: #A0A0A0;
+            --success: #4ADE80;
+            --streak: #F97316;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', system-ui, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(rgba(255,107,53,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,107,53,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 16px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Tab Navigation */
+        .tab-nav {
+            display: flex;
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 6px;
+            margin-bottom: 20px;
+            gap: 4px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px 8px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-family: 'Noto Sans SC', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .tab-btn .icon {
+            font-size: 24px;
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+        }
+
+        .tab-btn[data-tab="teeth"].active {
+            background: var(--teeth-primary);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .tab-btn[data-tab="plank"].active {
+            background: var(--plank-primary);
+            box-shadow: 0 4px 15px rgba(156, 39, 176, 0.3);
+        }
+
+        .tab-btn:hover:not(.active) {
+            background: var(--bg-elevated);
+        }
+
+        /* Content Sections */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 4px 20px rgba(255, 107, 53, 0.3);
+        }
+
+        .logo h1 {
+            font-family: 'Bebas Neue', Impact, sans-serif;
+            font-size: 28px;
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .date-display {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        /* Push-up Section */
+        .counter-section {
+            background: var(--bg-card);
+            border-radius: 24px;
+            padding: 40px 20px;
+            margin: 20px 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .counter-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at center, rgba(255, 107, 53, 0.1) 0%, transparent 50%);
+            animation: pulse-glow 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+
+        .timer-display {
+            font-size: 18px;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            font-family: 'Bebas Neue', monospace;
+            letter-spacing: 2px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .counter-number {
+            font-family: 'Bebas Neue', Impact, sans-serif;
+            font-size: 160px;
+            line-height: 1;
+            color: var(--text-primary);
+            text-shadow: 0 0 60px rgba(255, 107, 53, 0.3);
+            position: relative;
+            z-index: 1;
+            transition: transform 0.15s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .counter-number.bounce {
+            transform: scale(1.15);
+        }
+
+        .counter-label {
+            font-size: 16px;
+            color: var(--text-secondary);
+            margin-top: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .keyboard-hint {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 20px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            opacity: 0.7;
+            position: relative;
+            z-index: 1;
+        }
+
+        .key-badge {
+            background: var(--bg-elevated);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-family: 'Bebas Neue', monospace;
+            font-size: 14px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* Buttons */
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-top: 30px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 16px 24px;
+            border: none;
+            border-radius: 50px;
+            font-family: 'Noto Sans SC', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            box-shadow: 0 4px 20px rgba(255, 107, 53, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 30px rgba(255, 107, 53, 0.5);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+        .btn-secondary {
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .btn-secondary:hover {
+            background: #333;
+        }
+
+        .btn-add {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            font-size: 32px;
+            flex: none;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            box-shadow: 0 6px 30px rgba(255, 107, 53, 0.5);
+        }
+
+        .btn-add:active {
+            transform: scale(0.95);
+        }
+
+        .btn-add.holding {
+            animation: hold-pulse 0.1s infinite;
+        }
+
+        @keyframes hold-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(0.95); }
+        }
+
+        /* Save Panel */
+        .save-panel {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 24px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .save-panel.active {
+            display: block;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .save-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .save-stat {
+            background: var(--bg-elevated);
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .save-stat-value {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 28px;
+            color: var(--primary);
+        }
+
+        .save-stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* Stats Panel */
+        .stats-panel {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            padding: 20px 12px;
+            border-radius: 16px;
+            text-align: center;
+        }
+
+        .stat-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 36px;
+            color: var(--text-primary);
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* Achievements */
+        .achievements-section {
+            margin: 30px 0;
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+
+        .achievements-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+        }
+
+        .achievement-badge {
+            aspect-ratio: 1;
+            background: var(--bg-card);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .achievement-badge.locked {
+            opacity: 0.4;
+            filter: grayscale(1);
+        }
+
+        .achievement-badge.unlocked {
+            background: linear-gradient(135deg, var(--bg-card), #2a2520);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .achievement-badge.new {
+            animation: new-glow 1s ease-in-out infinite;
+        }
+
+        @keyframes new-glow {
+            0%, 100% { box-shadow: 0 0 20px var(--accent-glow); }
+            50% { box-shadow: 0 0 40px var(--accent-glow), 0 0 60px var(--accent-glow); }
+        }
+
+        .achievement-icon {
+            font-size: 28px;
+            margin-bottom: 4px;
+        }
+
+        .achievement-name {
+            font-size: 10px;
+            text-align: center;
+            color: var(--text-secondary);
+            line-height: 1.2;
+        }
+
+        .achievement-badge.unlocked .achievement-name {
+            color: var(--accent);
+        }
+
+        /* History */
+        .history-section {
+            margin: 30px 0;
+        }
+
+        .history-list {
+            background: var(--bg-card);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .history-item {
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            transition: background 0.2s;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .history-item:hover {
+            background: var(--bg-elevated);
+        }
+
+        .history-item.today {
+            background: rgba(255, 107, 53, 0.1);
+            border-left: 3px solid var(--primary);
+        }
+
+        .history-date {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .history-item.today .history-date {
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        .history-count {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 24px;
+            color: var(--text-primary);
+        }
+
+        .history-duration {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .history-empty {
+            padding: 40px 20px;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+
+        /* ========== TEETH SECTION STYLES ========== */
+        .teeth-section {
+            padding: 0;
+        }
+
+        .teeth-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: linear-gradient(135deg, var(--teeth-primary), var(--teeth-secondary));
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(76, 175, 80, 0.3);
+        }
+
+        .teeth-header h2 {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .teeth-header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .teeth-task-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border-left: 4px solid var(--teeth-primary);
+        }
+
+        .teeth-task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .teeth-task-name {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .teeth-task-time {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .teeth-task-status {
+            font-size: 14px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: var(--bg-elevated);
+        }
+
+        .teeth-task-status.done {
+            background: rgba(76, 175, 80, 0.2);
+            color: var(--success);
+        }
+
+        .teeth-task-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .teeth-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .teeth-btn-complete {
+            background: var(--teeth-primary);
+            color: white;
+        }
+
+        .teeth-btn-camera {
+            background: var(--teeth-secondary);
+            color: white;
+        }
+
+        .teeth-btn-album {
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+        }
+
+        .teeth-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .teeth-progress {
+            margin-top: 20px;
+        }
+
+        .teeth-progress-bar {
+            height: 8px;
+            background: var(--bg-elevated);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .teeth-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--teeth-primary), var(--teeth-secondary));
+            transition: width 0.3s ease;
+        }
+
+        .teeth-progress-text {
+            text-align: center;
+            margin-top: 8px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* Teeth Gallery */
+        .teeth-gallery {
+            margin-top: 20px;
+        }
+
+        .teeth-gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .teeth-photo-item {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 8px;
+            overflow: hidden;
+            background: var(--bg-elevated);
+        }
+
+        .teeth-photo-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .teeth-photo-date {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 4px;
+            font-size: 10px;
+            text-align: center;
+        }
+
+        .teeth-photo-delete {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 20px;
+            height: 20px;
+            background: rgba(255,255,255,0.9);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .teeth-empty-gallery {
+            text-align: center;
+            padding: 30px;
+            color: var(--text-secondary);
+        }
+
+        /* ========== PLANK SECTION STYLES ========== */
+        .plank-section {
+            padding: 0;
+        }
+
+        .plank-timer-display {
+            font-family: 'Bebas Neue', Impact, sans-serif;
+            font-size: 100px;
+            text-align: center;
+            color: var(--text-primary);
+            text-shadow: 0 0 60px rgba(156, 39, 176, 0.3);
+            margin: 20px 0;
+        }
+
+        .plank-controls {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .plank-btn {
+            padding: 16px 32px;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .plank-btn-start {
+            background: linear-gradient(135deg, var(--plank-primary), var(--plank-secondary));
+            color: white;
+            box-shadow: 0 4px 20px rgba(156, 39, 176, 0.4);
+        }
+
+        .plank-btn-pause {
+            background: var(--plank-secondary);
+            color: white;
+        }
+
+        .plank-btn-reset {
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+        }
+
+        .plank-btn-save {
+            background: var(--success);
+            color: var(--bg-dark);
+        }
+
+        .plank-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Plank Stats */
+        .plank-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .plank-stat-card {
+            background: var(--bg-card);
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .plank-stat-value {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 28px;
+            background: linear-gradient(135deg, var(--plank-primary), var(--plank-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .plank-stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* Plank History */
+        .plank-history-item {
+            padding: 14px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .plank-history-item:last-child {
+            border-bottom: none;
+        }
+
+        .plank-history-date {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .plank-history-time {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 20px;
+            color: var(--plank-secondary);
+        }
+
+        /* ========== MODAL STYLES ========== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border-radius: 24px;
+            padding: 40px;
+            text-align: center;
+            max-width: 320px;
+            width: 90%;
+            transform: scale(0.8);
+            transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+
+        .modal-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            animation: achievement-pop 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        @keyframes achievement-pop {
+            0% { transform: scale(0) rotate(-20deg); }
+            60% { transform: scale(1.2) rotate(10deg); }
+            100% { transform: scale(1) rotate(0); }
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 8px;
+        }
+
+        .modal-desc {
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+
+        .modal-btn {
+            background: linear-gradient(135deg, var(--accent), var(--primary));
+            color: var(--bg-dark);
+            border: none;
+            padding: 14px 40px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .modal-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* Camera Modal */
+        .camera-modal .modal {
+            max-width: 90%;
+            max-height: 90%;
+            padding: 20px;
+        }
+
+        .camera-preview {
+            width: 100%;
+            max-height: 300px;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            background: var(--bg-dark);
+        }
+
+        .camera-preview video,
+        .camera-preview canvas,
+        .camera-preview img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .compression-info {
+            background: var(--bg-elevated);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            text-align: left;
+        }
+
+        .camera-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-size: 14px;
+            z-index: 100;
+            opacity: 0;
+            transition: all 0.3s ease;
+            border: 1px solid var(--primary);
+            box-shadow: 0 4px 20px rgba(255, 107, 53, 0.3);
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* Confetti */
+        .confetti {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1001;
+            overflow: hidden;
+        }
+
+        .confetti-piece {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: var(--accent);
+            animation: confetti-fall 3s ease-out forwards;
+        }
+
+        @keyframes confetti-fall {
+            0% {
+                transform: translateY(-100px) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .bottom-spacer {
+            height: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Tab Navigation -->
+        <nav class="tab-nav">
+            <button class="tab-btn active" data-tab="pushup">
+                <span class="icon">💪</span>
+                <span>俯卧撑</span>
+            </button>
+            <button class="tab-btn" data-tab="teeth">
+                <span class="icon">🦷</span>
+                <span>牙齿</span>
+            </button>
+            <button class="tab-btn" data-tab="plank">
+                <span class="icon">⏱️</span>
+                <span>平板支撑</span>
+            </button>
+        </nav>
+
+        <!-- ========== PUSH-UP SECTION ========== -->
+        <section class="tab-content active" id="pushup-content">
+            <header class="header">
+                <div class="logo">
+                    <div class="logo-icon">💪</div>
+                    <h1>PUSH-UP</h1>
+                </div>
+                <div class="date-display" id="pushup-date"></div>
+            </header>
+
+            <section class="counter-section">
+                <div class="timer-display" id="pushup-timer">00:00</div>
+                <div class="counter-number" id="pushup-count">0</div>
+                <div class="counter-label">俯卧撑</div>
+                <div class="keyboard-hint" id="pushup-hint">
+                    <span class="key-badge">SPACE</span>
+                    <span>或点击按钮计数</span>
+                </div>
+            </section>
+
+            <div class="controls" id="pushup-controls-start">
+                <button class="btn btn-primary" id="pushup-start">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                    开始训练
+                </button>
+            </div>
+
+            <div class="controls hidden" id="pushup-controls-active">
+                <button class="btn btn-add" id="pushup-add">+</button>
+            </div>
+
+            <div class="controls hidden" id="pushup-controls-end">
+                <button class="btn btn-secondary" id="pushup-giveup">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                    放弃
+                </button>
+                <button class="btn btn-primary" id="pushup-save">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    保存记录
+                </button>
+            </div>
+
+            <div class="save-panel" id="pushup-save-panel">
+                <div class="save-stats">
+                    <div class="save-stat">
+                        <div class="save-stat-value" id="pushup-save-count">0</div>
+                        <div class="save-stat-label">俯卧撑</div>
+                    </div>
+                    <div class="save-stat">
+                        <div class="save-stat-value" id="pushup-save-duration">00:00</div>
+                        <div class="save-stat-label">用时</div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" style="width: 100%;" id="pushup-save-confirm">
+                    确认保存
+                </button>
+            </div>
+
+            <section class="stats-panel">
+                <div class="stat-card">
+                    <div class="stat-icon">📊</div>
+                    <div class="stat-value" id="pushup-total-days">0</div>
+                    <div class="stat-label">训练次数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🔥</div>
+                    <div class="stat-value" id="pushup-streak">0</div>
+                    <div class="stat-label">连续打卡</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🏆</div>
+                    <div class="stat-value" id="pushup-total-count">0</div>
+                    <div class="stat-label">总俯卧撑</div>
+                </div>
+            </section>
+
+            <section class="achievements-section">
+                <h2 class="section-title">
+                    <span>🏅</span>
+                    成就墙
+                </h2>
+                <div class="achievements-grid" id="pushup-achievements"></div>
+            </section>
+
+            <section class="history-section">
+                <h2 class="section-title">
+                    <span>📋</span>
+                    最近训练
+                </h2>
+                <div class="history-list" id="pushup-history"></div>
+            </section>
+        </section>
+
+        <!-- ========== TEETH SECTION ========== -->
+        <section class="tab-content" id="teeth-content">
+            <div class="teeth-header">
+                <h2>🦷 牙齿洁白提醒</h2>
+                <p>坚持记录 · 见证亮白变化</p>
+            </div>
+
+            <div class="date-display" id="teeth-date" style="text-align: center; margin: 16px 0; color: var(--text-secondary);"></div>
+
+            <div class="teeth-task-card" data-type="morning">
+                <div class="teeth-task-header">
+                    <div>
+                        <div class="teeth-task-name">🌅 晨间刷牙</div>
+                        <div class="teeth-task-time">≥2分钟，巴氏刷牙法</div>
+                    </div>
+                    <span class="teeth-task-status" id="teeth-morning-status">⏳ 未做</span>
+                </div>
+                <div class="teeth-task-actions">
+                    <button class="teeth-btn teeth-btn-complete" data-type="morning">✅ 完成</button>
+                    <button class="teeth-btn teeth-btn-camera" data-type="morning">📷 拍摄</button>
+                    <button class="teeth-btn teeth-btn-album" data-type="morning">🖼️ 相册</button>
+                </div>
+            </div>
+
+            <div class="teeth-task-card" data-type="evening">
+                <div class="teeth-task-header">
+                    <div>
+                        <div class="teeth-task-name">🌙 晚间刷牙</div>
+                        <div class="teeth-task-time">≥2分钟，巴氏刷牙法</div>
+                    </div>
+                    <span class="teeth-task-status" id="teeth-evening-status">⏳ 未做</span>
+                </div>
+                <div class="teeth-task-actions">
+                    <button class="teeth-btn teeth-btn-complete" data-type="evening">✅ 完成</button>
+                    <button class="teeth-btn teeth-btn-camera" data-type="evening">📷 拍摄</button>
+                    <button class="teeth-btn teeth-btn-album" data-type="evening">🖼️ 相册</button>
+                </div>
+            </div>
+
+            <div class="teeth-task-card" data-type="extra">
+                <div class="teeth-task-header">
+                    <div>
+                        <div class="teeth-task-name">☀️ 其他时间段</div>
+                        <div class="teeth-task-time">午后或任意时间</div>
+                    </div>
+                    <span class="teeth-task-status" id="teeth-extra-status">⏳ 未做</span>
+                </div>
+                <div class="teeth-task-actions">
+                    <button class="teeth-btn teeth-btn-complete" data-type="extra">✅ 完成</button>
+                    <button class="teeth-btn teeth-btn-camera" data-type="extra">📷 拍摄</button>
+                    <button class="teeth-btn teeth-btn-album" data-type="extra">🖼️ 相册</button>
+                </div>
+            </div>
+
+            <div class="teeth-progress">
+                <div class="teeth-progress-bar">
+                    <div class="teeth-progress-fill" id="teeth-progress-fill"></div>
+                </div>
+                <div class="teeth-progress-text" id="teeth-progress-text">今日已完成 0/3 项护理</div>
+            </div>
+
+            <div class="teeth-gallery">
+                <h3 class="section-title" style="margin-top: 24px;">
+                    <span>📅</span>
+                    洁白相册
+                </h3>
+                <div class="teeth-gallery-grid" id="teeth-gallery"></div>
+            </div>
+        </section>
+
+        <!-- ========== PLANK SECTION ========== -->
+        <section class="tab-content" id="plank-content">
+            <header class="header">
+                <div class="logo">
+                    <div class="logo-icon" style="background: linear-gradient(135deg, var(--plank-primary), var(--plank-secondary));">⏱️</div>
+                    <h1 style="background: linear-gradient(135deg, var(--plank-primary), var(--plank-secondary)); -webkit-background-clip: text;">PLANK</h1>
+                </div>
+                <div class="date-display" id="plank-date"></div>
+            </header>
+
+            <section class="counter-section" style="background: linear-gradient(180deg, var(--bg-card) 0%, rgba(156,39,176,0.1) 100%);">
+                <div class="plank-timer-display" id="plank-timer">00:00</div>
+            </section>
+
+            <div class="plank-controls">
+                <button class="plank-btn plank-btn-start" id="plank-start">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                    开始
+                </button>
+                <button class="plank-btn plank-btn-pause hidden" id="plank-pause">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                    暂停
+                </button>
+                <button class="plank-btn plank-btn-reset hidden" id="plank-reset">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+                    重置
+                </button>
+                <button class="plank-btn plank-btn-save hidden" id="plank-save">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                    保存
+                </button>
+            </div>
+
+            <section class="stats-panel" style="margin-top: 24px;">
+                <div class="plank-stat-card">
+                    <div class="plank-stat-value" id="plank-today-count">0</div>
+                    <div class="plank-stat-label">今日次数</div>
+                </div>
+                <div class="plank-stat-card">
+                    <div class="plank-stat-value" id="plank-today-best">0:00</div>
+                    <div class="plank-stat-label">今日最佳</div>
+                </div>
+                <div class="plank-stat-card">
+                    <div class="plank-stat-value" id="plank-total">0</div>
+                    <div class="plank-stat-label">总训练</div>
+                </div>
+            </section>
+
+            <section class="history-section">
+                <h2 class="section-title">
+                    <span>📋</span>
+                    历史记录
+                </h2>
+                <div class="history-list" id="plank-history"></div>
+            </section>
+
+            <section class="achievements-section">
+                <h2 class="section-title">
+                    <span>🏅</span>
+                    成就墙
+                </h2>
+                <div class="achievements-grid" id="plank-achievements"></div>
+            </section>
+        </section>
+
+        <div class="bottom-spacer"></div>
+    </div>
+
+    <!-- Achievement Modal -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal">
+            <div class="modal-icon" id="modal-icon">🏆</div>
+            <div class="modal-title" id="modal-title">成就解锁!</div>
+            <div class="modal-desc" id="modal-desc">恭喜你获得新成就</div>
+            <button class="modal-btn" id="modal-close">太棒了!</button>
+        </div>
+    </div>
+
+    <!-- Camera Modal -->
+    <div class="modal-overlay camera-modal" id="camera-modal">
+        <div class="modal" style="max-width: 95%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="font-size: 18px;">📷 拍摄牙齿照片</h3>
+                <button style="background: none; border: none; color: var(--text-secondary); font-size: 24px; cursor: pointer;" id="close-camera">×</button>
+            </div>
+            
+            <div class="compression-info">
+                <p><strong>📱 手机拍照优化：</strong>自动压缩高分辨率照片</p>
+            </div>
+            
+            <div class="camera-preview">
+                <video id="camera-video" autoplay playsinline></video>
+                <canvas id="camera-canvas" style="display: none;"></canvas>
+                <img id="captured-image" style="display: none;" alt="已拍摄">
+            </div>
+            
+            <div class="camera-actions">
+                <button class="teeth-btn teeth-btn-camera" id="capture-btn">📸 拍照</button>
+                <button class="teeth-btn teeth-btn-album hidden" id="retake-btn">🔄 重拍</button>
+                <button class="teeth-btn teeth-btn-complete hidden" id="save-capture-btn">💾 保存</button>
+            </div>
+
+            <input type="file" id="album-input" accept="image/*" style="display: none;">
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Confetti -->
+    <div class="confetti" id="confetti"></div>
+
+    <script>
+        // ========== GLOBAL UTILITIES ==========
+        const getToday = () => {
+            const now = new Date();
+            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        };
+
+        const formatTime = (seconds) => {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        };
+
+        const formatDate = (dateStr) => {
+            const today = getToday();
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+            
+            if (dateStr === today) return '今天';
+            if (dateStr === yStr) return '昨天';
+            
+            const [y, m, d] = dateStr.split('-');
+            return `${parseInt(m)}月${parseInt(d)}日`;
+        };
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        function showConfetti() {
+            const container = document.getElementById('confetti');
+            const colors = ['#FF6B35', '#FFD93D', '#4ADE80', '#FF8F66', '#F97316', '#9C27B0'];
+            
+            for (let i = 0; i < 50; i++) {
+                const piece = document.createElement('div');
+                piece.className = 'confetti-piece';
+                piece.style.left = Math.random() * 100 + '%';
+                piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+                piece.style.animationDelay = Math.random() * 0.5 + 's';
+                container.appendChild(piece);
+            }
+            setTimeout(() => container.innerHTML = '', 3500);
+        }
+
+        // ========== TAB NAVIGATION ==========
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                btn.classList.add('active');
+                const tab = btn.dataset.tab;
+                document.getElementById(`${tab}-content`).classList.add('active');
+            });
+        });
+
+        // ========== PUSH-UP MODULE ==========
+        const PUSHUP_STORAGE = 'health_tracker_pushup';
+        const PUSHUP_ACHIEVEMENTS = [
+            { id: 'first', name: '初出茅庐', icon: '🏃', condition: (d) => d.totalDays >= 1 },
+            { id: 'ten', name: '10次挑战', icon: '⭐', condition: (d) => d.totalDays >= 10 },
+            { id: 'hundred', name: '百炼成钢', icon: '💪', condition: (d) => d.totalDays >= 100 },
+            { id: 'streak3', name: '连续3天', icon: '🔥', condition: (d) => d.longestStreak >= 3 },
+            { id: 'streak7', name: '一周坚持', icon: '📅', condition: (d) => d.longestStreak >= 7 },
+            { id: 'single50', name: '单次50+', icon: '💯', condition: (d) => d.maxSingle >= 50 },
+            { id: 'single100', name: '单次100+', icon: '🔥', condition: (d) => d.maxSingle >= 100 },
+        ];
+
+        let pushupData = JSON.parse(localStorage.getItem(PUSHUP_STORAGE) || JSON.stringify({
+            records: [], achievements: {}, stats: { totalDays: 0, totalCount: 0, currentStreak: 0, longestStreak: 0, maxSingle: 0 }
+        }));
+
+        let pushupState = { isTraining: false, count: 0, startTime: null, timerInterval: null };
+
+        function calculatePushupStats() {
+            const records = pushupData.records;
+            if (records.length === 0) {
+                pushupData.stats = { totalDays: 0, totalCount: 0, currentStreak: 0, longestStreak: 0, maxSingle: 0 };
+                return;
+            }
+
+            const dateSet = new Set();
+            let maxSingle = 0, totalCount = 0;
+            records.forEach(r => {
+                dateSet.add(r.date);
+                totalCount += r.count;
+                if (r.count > maxSingle) maxSingle = r.count;
+            });
+
+            const dates = Array.from(dateSet).sort();
+            const today = getToday();
+            let currentStreak = 0, longestStreak = 0, tempStreak = 0;
+
+            for (let i = dates.length - 1; i >= 0; i--) {
+                const d = dates[i];
+                if (i === dates.length - 1) {
+                    const yesterday = new Date();
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    const yStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+                    if (d === today || d === yStr) tempStreak = 1;
+                    else break;
+                } else {
+                    const diff = (new Date(dates[i + 1]) - new Date(d)) / (1000 * 60 * 60 * 24);
+                    if (diff === 1) tempStreak++;
+                    else { if (tempStreak > longestStreak) longestStreak = tempStreak; tempStreak = 1; }
+                }
+            }
+            if (tempStreak > longestStreak) longestStreak = tempStreak;
+            currentStreak = tempStreak;
+
+            pushupData.stats = { totalDays: dates.length, totalCount, currentStreak, longestStreak, maxSingle };
+        }
+
+        function checkPushupAchievements() {
+            const newAchievements = [];
+            PUSHUP_ACHIEVEMENTS.forEach(a => {
+                const wasUnlocked = pushupData.achievements[a.id]?.unlocked;
+                const isUnlocked = a.condition(pushupData.stats);
+                if (isUnlocked && !wasUnlocked) {
+                    pushupData.achievements[a.id] = { unlocked: true, date: getToday() };
+                    newAchievements.push(a);
+                }
+            });
+            return newAchievements;
+        }
+
+        function updatePushupUI() {
+            calculatePushupStats();
+            document.getElementById('pushup-total-days').textContent = pushupData.stats.totalDays;
+            document.getElementById('pushup-streak').textContent = pushupData.stats.currentStreak;
+            document.getElementById('pushup-total-count').textContent = pushupData.stats.totalCount;
+
+            const grid = document.getElementById('pushup-achievements');
+            grid.innerHTML = PUSHUP_ACHIEVEMENTS.map(a => {
+                const info = pushupData.achievements[a.id];
+                const isUnlocked = info?.unlocked;
+                return `<div class="achievement-badge ${isUnlocked ? 'unlocked' : 'locked'}">
+                    <div class="achievement-icon">${a.icon}</div>
+                    <div class="achievement-name">${a.name}</div>
+                </div>`;
+            }).join('');
+
+            const list = document.getElementById('pushup-history');
+            const recent = [...pushupData.records].sort((a, b) => `${b.date} ${b.time}` > `${a.date} ${a.time}` ? 1 : -1).slice(0, 10);
+            
+            if (recent.length === 0) {
+                list.innerHTML = `<div class="history-empty"><p>还没有记录，开始你的第一次训练吧!</p></div>`;
+            } else {
+                list.innerHTML = recent.map(r => `
+                    <div class="history-item ${r.date === getToday() ? 'today' : ''}">
+                        <div><div class="history-date">${formatDate(r.date)} ${r.time}</div></div>
+                        <div style="text-align: right;">
+                            <div class="history-count">${r.count}</div>
+                            <div class="history-duration">${formatTime(r.duration)}</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function pushupStart() {
+            pushupState.isTraining = true;
+            pushupState.count = 0;
+            pushupState.startTime = Date.now();
+            
+            document.getElementById('pushup-count').textContent = '0';
+            document.getElementById('pushup-timer').textContent = '00:00';
+            document.getElementById('pushup-controls-start').classList.add('hidden');
+            document.getElementById('pushup-controls-active').classList.remove('hidden');
+            document.getElementById('pushup-controls-end').classList.remove('hidden');
+            document.getElementById('pushup-hint').classList.add('hidden');
+
+            pushupState.timerInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - pushupState.startTime) / 1000);
+                document.getElementById('pushup-timer').textContent = formatTime(elapsed);
+            }, 1000);
+        }
+
+        function pushupAdd() {
+            if (!pushupState.isTraining) return;
+            pushupState.count++;
+            const counter = document.getElementById('pushup-count');
+            counter.textContent = pushupState.count;
+            counter.classList.add('bounce');
+            setTimeout(() => counter.classList.remove('bounce'), 150);
+        }
+
+        function pushupEnd(save = false) {
+            pushupState.isTraining = false;
+            clearInterval(pushupState.timerInterval);
+
+            document.getElementById('pushup-controls-start').classList.remove('hidden');
+            document.getElementById('pushup-controls-active').classList.add('hidden');
+            document.getElementById('pushup-controls-end').classList.add('hidden');
+            document.getElementById('pushup-hint').classList.remove('hidden');
+            document.getElementById('pushup-count').textContent = '0';
+
+            if (save && pushupState.count > 0) {
+                const duration = Math.floor((Date.now() - pushupState.startTime) / 1000);
+                const now = new Date();
+                const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                
+                pushupData.records.push({ id: Date.now(), count: pushupState.count, duration, date: getToday(), time });
+                localStorage.setItem(PUSHUP_STORAGE, JSON.stringify(pushupData));
+                
+                const newAchievements = checkPushupAchievements();
+                if (newAchievements.length > 0) {
+                    localStorage.setItem(PUSHUP_STORAGE, JSON.stringify(pushupData));
+                    document.getElementById('modal-icon').textContent = newAchievements[0].icon;
+                    document.getElementById('modal-title').textContent = newAchievements[0].name;
+                    document.getElementById('modal-desc').textContent = '恭喜解锁新成就!';
+                    document.getElementById('modal-overlay').classList.add('active');
+                    showConfetti();
+                }
+                
+                updatePushupUI();
+                showToast(`训练完成! ${pushupState.count}个俯卧撑 💪`);
+            }
+            pushupState.count = 0;
+        }
+
+        document.getElementById('pushup-start').addEventListener('click', pushupStart);
+        document.getElementById('pushup-add').addEventListener('click', pushupAdd);
+        
+        let holdTimer;
+        document.getElementById('pushup-add').addEventListener('mousedown', () => {
+            document.getElementById('pushup-add').classList.add('holding');
+            holdTimer = setTimeout(() => {
+                pushupState.holdInterval = setInterval(pushupAdd, 80);
+            }, 500);
+        });
+        document.getElementById('pushup-add').addEventListener('mouseup', () => {
+            clearTimeout(holdTimer);
+            clearInterval(pushupState.holdInterval);
+            document.getElementById('pushup-add').classList.remove('holding');
+        });
+
+        document.getElementById('pushup-giveup').addEventListener('click', () => {
+            if (confirm('确定要放弃本次训练吗？')) pushupEnd(false);
+        });
+
+        document.getElementById('pushup-save').addEventListener('click', () => {
+            if (pushupState.count === 0) { showToast('还没有计数哦!'); return; }
+            const duration = Math.floor((Date.now() - pushupState.startTime) / 1000);
+            document.getElementById('pushup-save-count').textContent = pushupState.count;
+            document.getElementById('pushup-save-duration').textContent = formatTime(duration);
+            document.getElementById('pushup-save-panel').classList.add('active');
+            document.getElementById('pushup-controls-end').classList.add('hidden');
+        });
+
+        document.getElementById('pushup-save-confirm').addEventListener('click', () => {
+            document.getElementById('pushup-save-panel').classList.remove('active');
+            pushupEnd(true);
+        });
+
+        document.getElementById('modal-close').addEventListener('click', () => {
+            document.getElementById('modal-overlay').classList.remove('active');
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && !e.repeat) {
+                e.preventDefault();
+                const activeTab = document.querySelector('.tab-content.active').id;
+                if (activeTab === 'pushup-content') {
+                    if (pushupState.isTraining) pushupAdd();
+                    else pushupStart();
+                }
+            }
+        });
+
+        // ========== TEETH MODULE ==========
+        const TEETH_STORAGE_TASKS = 'health_tracker_teeth_tasks';
+        const TEETH_STORAGE_PHOTOS = 'health_tracker_teeth_photos';
+
+        let teethData = JSON.parse(localStorage.getItem(TEETH_STORAGE_TASKS) || JSON.stringify({ morning: false, evening: false, extra: false }));
+        let teethPhotos = JSON.parse(localStorage.getItem(TEETH_STORAGE_PHOTOS) || '[]');
+        let currentTeethTask = null;
+        let cameraStream = null;
+
+        function updateTeethUI() {
+            ['morning', 'evening', 'extra'].forEach(type => {
+                const el = document.getElementById(`teeth-${type}-status`);
+                el.textContent = teethData[type] ? '✅ 完成' : '⏳ 未做';
+                el.className = `teeth-task-status ${teethData[type] ? 'done' : ''}`;
+            });
+
+            const completed = Object.values(teethData).filter(v => v).length;
+            const percentage = (completed / 3) * 100;
+            document.getElementById('teeth-progress-fill').style.width = `${percentage}%`;
+            document.getElementById('teeth-progress-text').textContent = `今日已完成 ${completed}/3 项护理`;
+
+            const gallery = document.getElementById('teeth-gallery');
+            if (teethPhotos.length === 0) {
+                gallery.innerHTML = `<div class="teeth-empty-gallery"><p>暂无照片记录</p></div>`;
+            } else {
+                gallery.innerHTML = teethPhotos.map((p, i) => `
+                    <div class="teeth-photo-item">
+                        <img src="${p.data}" alt="牙齿照片">
+                        <div class="teeth-photo-date">${p.date.split(' ')[0]}</div>
+                        <button class="teeth-photo-delete" onclick="deleteTeethPhoto(${i})">×</button>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function deleteTeethPhoto(index) {
+            if (confirm('确定删除这张照片?')) {
+                teethPhotos.splice(index, 1);
+                localStorage.setItem(TEETH_STORAGE_PHOTOS, JSON.stringify(teethPhotos));
+                updateTeethUI();
+                showToast('照片已删除');
+            }
+        }
+
+        window.deleteTeethPhoto = deleteTeethPhoto;
+
+        document.querySelectorAll('.teeth-btn-complete').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const type = btn.dataset.type;
+                teethData[type] = !teethData[type];
+                localStorage.setItem(TEETH_STORAGE_TASKS, JSON.stringify(teethData));
+                updateTeethUI();
+                showToast(teethData[type] ? '已完成!' : '已取消');
+            });
+        });
+
+        document.querySelectorAll('.teeth-btn-camera').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentTeethTask = btn.dataset.type;
+                openCamera();
+            });
+        });
+
+        document.querySelectorAll('.teeth-btn-album').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentTeethTask = btn.dataset.type;
+                document.getElementById('album-input').click();
+            });
+        });
+
+        document.getElementById('album-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const maxSize = 1024;
+                    let { width, height } = img;
+                    if (width > maxSize || height > maxSize) {
+                        if (width > height) { height = Math.round(height * maxSize / width); width = maxSize; }
+                        else { width = Math.round(width * maxSize / height); height = maxSize; }
+                    }
+                    canvas.width = width; canvas.height = height;
+                    canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                    
+                    const now = new Date();
+                    teethPhotos.unshift({ data: dataUrl, date: now.toLocaleString('zh-CN') });
+                    localStorage.setItem(TEETH_STORAGE_PHOTOS, JSON.stringify(teethPhotos));
+                    updateTeethUI();
+                    showToast('照片已保存');
+                };
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        function openCamera() {
+            document.getElementById('camera-modal').classList.add('active');
+            document.getElementById('camera-video').style.display = 'block';
+            document.getElementById('captured-image').style.display = 'none';
+            document.getElementById('capture-btn').classList.remove('hidden');
+            document.getElementById('retake-btn').classList.add('hidden');
+            document.getElementById('save-capture-btn').classList.add('hidden');
+
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                .then(stream => {
+                    cameraStream = stream;
+                    document.getElementById('camera-video').srcObject = stream;
+                })
+                .catch(() => showToast('无法访问相机'));
+        }
+
+        document.getElementById('close-camera').addEventListener('click', () => {
+            document.getElementById('camera-modal').classList.remove('active');
+            if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
+        });
+
+        document.getElementById('capture-btn').addEventListener('click', () => {
+            const video = document.getElementById('camera-video');
+            const canvas = document.getElementById('camera-canvas');
+            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+            document.getElementById('captured-image').src = dataUrl;
+            document.getElementById('captured-image').style.display = 'block';
+            document.getElementById('camera-video').style.display = 'none';
+            document.getElementById('capture-btn').classList.add('hidden');
+            document.getElementById('retake-btn').classList.remove('hidden');
+            document.getElementById('save-capture-btn').classList.remove('hidden');
+            
+            document.getElementById('captured-image').dataset.dataUrl = dataUrl;
+        });
+
+        document.getElementById('retake-btn').addEventListener('click', () => {
+            document.getElementById('camera-video').style.display = 'block';
+            document.getElementById('captured-image').style.display = 'none';
+            document.getElementById('capture-btn').classList.remove('hidden');
+            document.getElementById('retake-btn').classList.add('hidden');
+            document.getElementById('save-capture-btn').classList.add('hidden');
+        });
+
+        document.getElementById('save-capture-btn').addEventListener('click', () => {
+            const dataUrl = document.getElementById('captured-image').dataset.dataUrl;
+            const now = new Date();
+            teethPhotos.unshift({ data: dataUrl, date: now.toLocaleString('zh-CN') });
+            localStorage.setItem(TEETH_STORAGE_PHOTOS, JSON.stringify(teethPhotos));
+            updateTeethUI();
+            showToast('照片已保存');
+            document.getElementById('close-camera').click();
+        });
+
+        // ========== PLANK MODULE ==========
+        const PLANK_STORAGE = 'health_tracker_plank';
+        const PLANK_ACHIEVEMENTS = [
+            { id: 'first', name: '初次尝试', icon: '🏃', condition: (d) => d.total >= 1 },
+            { id: 'ten', name: '10次训练', icon: '⭐', condition: (d) => d.total >= 10 },
+            { id: 'streak3', name: '连续3天', icon: '🔥', condition: (d) => d.longestStreak >= 3 },
+            { id: 'streak7', name: '一周坚持', icon: '📅', condition: (d) => d.longestStreak >= 7 },
+            { id: 'best1', name: '坚持1分钟', icon: '⏱️', condition: (d) => d.best >= 60 },
+            { id: 'best2', name: '坚持2分钟', icon: '💪', condition: (d) => d.best >= 120 },
+        ];
+
+        let plankData = JSON.parse(localStorage.getItem(PLANK_STORAGE) || JSON.stringify({
+            records: [], stats: { total: 0, best: 0, todayCount: 0, todayBest: 0, currentStreak: 0, longestStreak: 0 }
+        }));
+
+        let plankState = { isRunning: false, seconds: 0, interval: null };
+
+        function calculatePlankStats() {
+            const today = getToday();
+            const todayRecords = plankData.records.filter(r => r.date === today);
+            
+            plankData.stats.todayCount = todayRecords.length;
+            plankData.stats.todayBest = todayRecords.length > 0 ? Math.max(...todayRecords.map(r => r.duration)) : 0;
+            plankData.stats.total = plankData.records.length;
+            plankData.stats.best = plankData.records.length > 0 ? Math.max(...plankData.records.map(r => r.duration)) : 0;
+
+            const dateSet = new Set(plankData.records.map(r => r.date));
+            const dates = Array.from(dateSet).sort();
+            let longestStreak = 0, currentStreak = 0, tempStreak = 0;
+
+            for (let i = dates.length - 1; i >= 0; i--) {
+                if (i === dates.length - 1) {
+                    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+                    const yStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+                    if (dates[i] === today || dates[i] === yStr) tempStreak = 1;
+                    else break;
+                } else {
+                    const diff = (new Date(dates[i + 1]) - new Date(dates[i])) / 86400000;
+                    if (diff === 1) tempStreak++;
+                    else { if (tempStreak > longestStreak) longestStreak = tempStreak; tempStreak = 1; }
+                }
+            }
+            if (tempStreak > longestStreak) longestStreak = tempStreak;
+            currentStreak = tempStreak;
+
+            plankData.stats.longestStreak = longestStreak;
+            plankData.stats.currentStreak = currentStreak;
+        }
+
+        function updatePlankUI() {
+            calculatePlankStats();
+            document.getElementById('plank-today-count').textContent = plankData.stats.todayCount;
+            document.getElementById('plank-today-best').textContent = formatTime(plankData.stats.todayBest);
+            document.getElementById('plank-total').textContent = plankData.stats.total;
+
+            const grid = document.getElementById('plank-achievements');
+            grid.innerHTML = PLANK_ACHIEVEMENTS.map(a => {
+                const isUnlocked = a.condition(plankData.stats);
+                return `<div class="achievement-badge ${isUnlocked ? 'unlocked' : 'locked'}">
+                    <div class="achievement-icon">${a.icon}</div>
+                    <div class="achievement-name">${a.name}</div>
+                </div>`;
+            }).join('');
+
+            const list = document.getElementById('plank-history');
+            const recent = [...plankData.records].sort((a, b) => `${b.date} ${b.time}` > `${a.date} ${a.time}` ? 1 : -1).slice(0, 10);
+            
+            if (recent.length === 0) {
+                list.innerHTML = `<div class="history-empty"><p>还没有记录，开始你的第一次训练吧!</p></div>`;
+            } else {
+                list.innerHTML = recent.map(r => `
+                    <div class="history-item ${r.date === getToday() ? 'today' : ''}">
+                        <div><div class="history-date">${formatDate(r.date)} ${r.time}</div></div>
+                        <div class="plank-history-time">${formatTime(r.duration)}</div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function plankStart() {
+            plankState.isRunning = true;
+            plankState.startTime = Date.now();
+            plankState.interval = setInterval(() => {
+                plankState.seconds++;
+                document.getElementById('plank-timer').textContent = formatTime(plankState.seconds);
+            }, 1000);
+            
+            document.getElementById('plank-start').classList.add('hidden');
+            document.getElementById('plank-pause').classList.remove('hidden');
+            document.getElementById('plank-reset').classList.remove('hidden');
+            document.getElementById('plank-save').classList.remove('hidden');
+        }
+
+        function plankPause() {
+            clearInterval(plankState.interval);
+            plankState.isRunning = false;
+            document.getElementById('plank-start').classList.remove('hidden');
+            document.getElementById('plank-pause').classList.add('hidden');
+        }
+
+        function plankReset() {
+            clearInterval(plankState.interval);
+            plankState.isRunning = false;
+            plankState.seconds = 0;
+            document.getElementById('plank-timer').textContent = '00:00';
+            document.getElementById('plank-start').classList.remove('hidden');
+            document.getElementById('plank-pause').classList.add('hidden');
+            document.getElementById('plank-reset').classList.add('hidden');
+            document.getElementById('plank-save').classList.add('hidden');
+        }
+
+        function plankSave() {
+            if (plankState.seconds < 5) { showToast('至少坚持5秒才能保存!'); return; }
+            
+            const now = new Date();
+            const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            
+            plankData.records.push({ duration: plankState.seconds, date: getToday(), time });
+            localStorage.setItem(PLANK_STORAGE, JSON.stringify(plankData));
+            
+            plankReset();
+            updatePlankUI();
+            showToast(`训练完成! ${formatTime(plankState.seconds)} ⏱️`);
+        }
+
+        document.getElementById('plank-start').addEventListener('click', plankStart);
+        document.getElementById('plank-pause').addEventListener('click', plankPause);
+        document.getElementById('plank-reset').addEventListener('click', plankReset);
+        document.getElementById('plank-save').addEventListener('click', plankSave);
+
+        // ========== INITIALIZATION ==========
+        function init() {
+            const now = new Date();
+            const dateStr = `${now.getMonth() + 1}月${now.getDate()}日 ${['日','一','二','三','四','五','六'][now.getDay()]}`;
+            
+            document.getElementById('pushup-date').textContent = dateStr;
+            document.getElementById('teeth-date').textContent = now.toLocaleDateString('zh-CN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            document.getElementById('plank-date').textContent = dateStr;
+
+            updatePushupUI();
+            updateTeethUI();
+            updatePlankUI();
+        }
+
+        init();
+    </script>
+</body>
+</html>
